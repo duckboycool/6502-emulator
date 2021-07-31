@@ -49,15 +49,179 @@ unsigned short pc;
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops ADC, AND, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CLC, CLD, CLI, CLV, CMP, CPX, CPY, EOR, JMP, JSR, LSR, ORA, PHA, PHP, PLA, PLP, ROL, ROR, RTI, RTS, SBC, SEC, SED, SEI
+    Ops ADC, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CLC, CLD, CLI, CLV, CMP, CPX, CPY, JMP, JSR, LSR, PHA, PHP, PLA, PLP, ROL, ROR, RTI, RTS, SBC, SEC, SED, SEI
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
-    Stack Register
 */
 unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
     switch (opcode) {
         case 0x00: // BRK (Force Break) Implied
         {
             return BRK_MOVE;
+        }
+
+        case 0x01: // ORA (IND, X)
+        {
+            break;
+        }
+
+        case 0x05: // ORA ("OR" Memory with Accumulator) ZP
+        {
+            a = a | memory[ops[0]];
+
+            return 0x02;
+        }
+
+        case 0x09: // ORA ("OR" Memory with Accumulator) IMM
+        {
+            a = a | ops[0];
+
+            return 0x02;
+        }
+
+        case 0x0D: // ORA ("OR" Memory with Accumulator) ABS
+        {
+            a = a | memory[ABS_ADDR];
+
+            return 0x03;
+        }
+        
+        case 0x11: // ORA (IND), Y
+        {
+            break;
+        }
+
+        case 0x15: // ORA ("OR" Memory with Accumulator) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            a = a | memory[addr];
+
+            return 0x02;
+        }
+
+        case 0x19: // ORA ("OR" Memory with Accumulator) ABS, Y
+        {
+            unsigned short addr = ABS_ADDR + y;
+            a = a | memory[addr];
+
+            return 0x03;
+        }
+
+        case 0x1D: // ORA ("OR" Memory with Accumulator) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            a = a | memory[addr];
+
+            return 0x03;
+        }
+
+        case 0x21: // AND (IND, X)
+        {
+            break;
+        }
+
+        case 0x25: // AND ("AND" Memory with Accumulator) ZP
+        {
+            a = a & memory[ops[0]];
+
+            return 0x02;
+        }
+
+        case 0x29: // AND ("AND" Memory with Accumulator) IMM
+        {
+            a = a & ops[0];
+
+            return 0x02;
+        }
+
+        case 0x2D: // AND ("AND" Memory with Accumulator) ABS
+        {
+            a = a & memory[ABS_ADDR];
+
+            return 0x03;
+        }
+        
+        case 0x31: // AND (IND), Y
+        {
+            break;
+        }
+
+        case 0x35: // AND ("AND" Memory with Accumulator) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            a = a & memory[addr];
+
+            return 0x02;
+        }
+
+        case 0x39: // AND ("AND" Memory with Accumulator) ABS, Y
+        {
+            unsigned short addr = ABS_ADDR + y;
+            a = a & memory[addr];
+
+            return 0x03;
+        }
+
+        case 0x3D: // AND ("AND" Memory with Accumulator) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            a = a & memory[addr];
+
+            return 0x03;
+        }
+
+        case 0x41: // EOR (IND, X)
+        {
+            break;
+        }
+
+        case 0x45: // EOR ("Exclusive-OR" Memory with Accumulator) ZP
+        {
+            a = a ^ memory[ops[0]];
+
+            return 0x02;
+        }
+
+        case 0x49: // EOR ("Exclusive-OR" Memory with Accumulator) IMM
+        {
+            a = a ^ ops[0];
+
+            return 0x02;
+        }
+
+        case 0x4D: // EOR ("Exclusive-OR" Memory with Accumulator) ABS
+        {
+            a = a ^ memory[ABS_ADDR];
+
+            return 0x03;
+        }
+
+        case 0x51: // EOR (IND), Y
+        {
+            break;
+        }
+
+        case 0x55: // EOR ("Exclusive-OR" Memory with Accumulator) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            a = a ^ memory[addr];
+
+            return 0x02;
+        }
+
+        case 0x59: // EOR ("Exclusive-OR" Memory with Accumulator) ABS, Y
+        {
+            unsigned short addr = ABS_ADDR + y;
+            a = a ^ memory[addr];
+
+            return 0x03;
+        }
+
+        case 0x5D: // EOR ("Exclusive-OR" Memory with Accumulator) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            a = a ^ memory[addr];
+
+            return 0x03;
         }
 
         case 0x81: // STA (IND, X)
@@ -450,11 +614,13 @@ int main(int argc, char** argv) {
     while (mvbytes != BRK_MOVE) {
         mvbytes = instruction(memory[pc], new unsigned char[] {memory[pc + 1], memory[pc + 2]});
 
-        printf("%04d %02X - A: %02X X: %02X Y: %02X\n", pc, memory[pc], a, x, y);
+        printf("%04X %02X - A: %02X X: %02X Y: %02X\n", pc, memory[pc], a, x, y);
 
         // Increment program counter
         pc += mvbytes;
     }
+
+    printf("\n");
 
     // Output of memory once finished (rows of 8 bytes)
     int start = 0x8000;

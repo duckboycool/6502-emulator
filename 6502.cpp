@@ -1,4 +1,8 @@
 #include <stdio.h>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <sstream>
 
 // Absolute address
 #define ABS_ADDR ops[1] * 0x100 + ops[0]
@@ -6,15 +10,42 @@
 using namespace std; // XXX: Might cause problems
 
 // Create memory and registers
-unsigned char* memory = new unsigned char[64000];
+unsigned char* memory = new unsigned char[0x10000];
 
 // Accumulator, x and y registers
 unsigned char a, x, y;
 
+// Flags / Status Register
+struct StatusRegister {
+    bool n = false; // Negative flag
+    bool v = false; // Overflow flag
+    bool _ = true;  // Unused flag
+    bool b = true;  // Break flag (-)
+    bool d = false; // Decimal flag
+    bool i = true;  // Interrupt disable flag
+    bool z = true;  // Zero flag
+    bool c = false; // Carry flag
+
+    unsigned char val() {
+        unsigned char out = 0;
+
+        out += n * 0b10000000;
+        out += v * 0b01000000;
+        out += _ * 0b00100000;
+        out += b * 0b00010000;
+        out += d * 0b00001000;
+        out += i * 0b00000100;
+        out += z * 0b00000010;
+        out += c * 0b00000001;
+
+        return out;
+    }
+} sr;
+
 const unsigned char BRK_MOVE = 0xFF; // Constant that represents a break when returned by an instruction
 
 // Program counter, current place in program
-unsigned short pc = 0;
+unsigned short pc;
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
@@ -389,14 +420,28 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
     return BRK_MOVE;
 }
 
-int main(int argc, char* argv[]) {
-    // TODO: Load in program from a given binary file
-    unsigned char code[64000] = {0xA9, 0xCE, 0xAA, 0xEA, 0x86, 0x20, 0xC8, 0x96, 0x20, 0xC8, 0xE8, 0x96, 0x20, 0xC8, 0x96, 0x20, 0xAA, 0x00};
+// TODO: CLI options to disable printing of ops and memory, set printing start and rows, enable printing address (FFF9?)
+int main(int argc, char** argv) {
+    // Get raw data from file
+    ifstream CodeFile(argv[1]);
+
+    stringstream buffer;
+    buffer << CodeFile.rdbuf();
+
+    string codestring = buffer.str();
+    
+    // Initialize with 0 (not sure why this isn't already)
+    for (int i = 0; i < 0x10000; i++) {
+        memory[i] = 0;
+    }
 
     // Load code into memory
-    for (int i = 0; i < sizeof(code)/sizeof(char); i++) {
-        memory[i] = code[i];
+    for (int i = 0; i < codestring.length(); i++) {
+        memory[i] = codestring[i];
     }
+
+    // Set program counter (reset vector)
+    pc = 0x100 * memory[0xFFFD] + memory[0xFFFC];
 
     // Amount of bytes to move (0xFF means break)
     unsigned char mvbytes = 0;
@@ -412,11 +457,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Output of memory once finished (rows of 8 bytes)
+    int start = 0x8000;
     int rows = 6;
 
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < 0x08; j++) {
-            printf("%02X ", memory[0x08 * i + j]);
+            printf("%02X ", memory[0x08 * i + j + start]);
         }
 
         printf("\n");

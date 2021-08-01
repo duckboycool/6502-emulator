@@ -49,8 +49,9 @@ unsigned short pc;
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CMP, CPX, CPY, JMP, JSR, LSR, PHA, PHP, PLA, PLP, ROL, ROR, RTI, RTS
+    Ops BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CMP, CPX, CPY, JMP, JSR, PHA, PHP, PLA, PLP, RTI, RTS
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
+    Check for if ops set other flags
 */
 unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
     switch (opcode) {
@@ -71,11 +72,29 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x06: // ASL (Shift Left One Bit (Memory or Accumulator)) ZP
+        {
+            sr.c = memory[ops[0]] / 0x80;
+
+            memory[ops[0]] = memory[ops[0]] * 0b10;
+
+            return 0x02;
+        }
+
         case 0x09: // ORA ("OR" Memory with Accumulator) IMM
         {
             a = a | ops[0];
 
             return 0x02;
+        }
+
+        case 0x0A: // ASL (Shift Left One Bit (Memory or Accumulator)) Accum
+        {
+            sr.c = a / 0x80;
+
+            a = a * 0b10;
+
+            return 0x01;
         }
 
         case 0x0D: // ORA ("OR" Memory with Accumulator) ABS
@@ -84,7 +103,16 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
 
             return 0x03;
         }
-        
+
+        case 0x0E: // ASL (Shift Left One Bit (Memory or Accumulator)) ABS
+        {
+            sr.c = memory[ABS_ADDR] / 0x80;
+
+            memory[ABS_ADDR] = memory[ABS_ADDR] * 0b10;
+
+            return 0x03;
+        }
+
         case 0x11: // ORA (IND), Y
         {
             break;
@@ -94,6 +122,16 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
         {
             unsigned char addr = ops[0] + x;
             a = a | memory[addr];
+
+            return 0x02;
+        }
+
+        case 0x16: // ASL (Shift Left One Bit (Memory or Accumulator)) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            sr.c = memory[addr] / 0x80;
+
+            memory[addr] = memory[addr] * 0b10;
 
             return 0x02;
         }
@@ -121,6 +159,16 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x03;
         }
 
+        case 0x1E: // ASL (Shift Left One Bit (Memory or Accumulator)) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            sr.c = memory[addr] / 0x80;
+
+            memory[addr] = memory[addr] * 0b10;
+
+            return 0x03;
+        }
+
         case 0x21: // AND (IND, X)
         {
             break;
@@ -133,6 +181,17 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x26: // ROL (Rotate One Bit Left (Memory or Accumulator)) ZP
+        {
+            bool bit = memory[ops[0]] / 0x80;
+
+            memory[ops[0]] = memory[ops[0]] * 0b10 + sr.c;
+
+            sr.c = bit;
+
+            return 0x02;
+        }
+
         case 0x29: // AND ("AND" Memory with Accumulator) IMM
         {
             a = a & ops[0];
@@ -140,9 +199,31 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x2A: // ROL (Rotate One Bit Left (Memory or Accumulator)) Accum
+        {
+            bool bit = a / 0x80;
+
+            a = a * 0b10 + sr.c;
+
+            sr.c = bit;
+
+            return 0x01;
+        }
+
         case 0x2D: // AND ("AND" Memory with Accumulator) ABS
         {
             a = a & memory[ABS_ADDR];
+
+            return 0x03;
+        }
+
+        case 0x2E: // ROL (Rotate One Bit Left (Memory or Accumulator)) ABS
+        {
+            bool bit = memory[ABS_ADDR] / 0x80;
+
+            memory[ABS_ADDR] = memory[ABS_ADDR] * 0b10 + sr.c;
+
+            sr.c = bit;
 
             return 0x03;
         }
@@ -156,6 +237,18 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
         {
             unsigned char addr = ops[0] + x;
             a = a & memory[addr];
+
+            return 0x02;
+        }
+
+        case 0x36: // ROL (Rotate One Bit Left (Memory or Accumulator)) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            bool bit = memory[addr] / 0x80;
+
+            memory[addr] = memory[addr] * 0b10 + sr.c;
+
+            sr.c = bit;
 
             return 0x02;
         }
@@ -183,6 +276,18 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x03;
         }
 
+        case 0x3E: // ROL (Rotate One Bit Left (Memory or Accumulator)) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            bool bit = memory[addr] / 0x80;
+
+            memory[addr] = memory[addr] * 0b10 + sr.c;
+
+            sr.c = bit;
+
+            return 0x03;
+        }
+
         case 0x41: // EOR (IND, X)
         {
             break;
@@ -195,6 +300,15 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x46: // LSR (Shift One Bit Right (Memory or Accumulator)) ZP
+        {
+            sr.c = memory[ops[0]] % 0b10;
+
+            memory[ops[0]] = memory[ops[0]] / 0b10;
+
+            return 0x02;
+        }
+
         case 0x49: // EOR ("Exclusive-OR" Memory with Accumulator) IMM
         {
             a = a ^ ops[0];
@@ -202,9 +316,27 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x4A: // LSR (Shift One Bit Right (Memory or Accumulator)) Accum
+        {
+            sr.c = a % 0b10;
+
+            a = a / 0b10;
+
+            return 0x01;
+        }
+
         case 0x4D: // EOR ("Exclusive-OR" Memory with Accumulator) ABS
         {
             a = a ^ memory[ABS_ADDR];
+
+            return 0x03;
+        }
+
+        case 0x4E: // LSR (Shift One Bit Right (Memory or Accumulator)) ABS
+        {
+            sr.c = memory[ABS_ADDR] % 0b10;
+
+            memory[ABS_ADDR] = memory[ABS_ADDR] / 0b10;
 
             return 0x03;
         }
@@ -218,6 +350,16 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
         {
             unsigned char addr = ops[0] + x;
             a = a ^ memory[addr];
+
+            return 0x02;
+        }
+
+        case 0x56: // LSR (Shift One Bit Right (Memory or Accumulator)) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            sr.c = memory[addr] % 0b10;
+
+            memory[addr] = memory[addr] / 0b10;
 
             return 0x02;
         }
@@ -245,6 +387,16 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x03;
         }
 
+        case 0x5E: // LSR (Shift One Bit Right (Memory or Accumulator)) ABX, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            sr.c = memory[addr] % 0b10;
+
+            memory[addr] = memory[addr] / 0b10;
+
+            return 0x03;
+        }
+
         case 0x61: // ADC (IND, X)
         {
             break;
@@ -259,6 +411,17 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x66: // ROR (Rotate One Bit Right (Memory or Accumulator)) ZP
+        {
+            bool bit = memory[ops[0]] % 0b10;
+
+            memory[ops[0]] = 0x80 * sr.c + memory[ops[0]] / 0b10;
+
+            sr.c = bit;
+
+            return 0x02;
+        }
+
         case 0x69: // ADC (Add Memory to Accumulator with Carry) IMM
         {
             a = a + ops[0] + sr.c;
@@ -268,11 +431,33 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x6A: // ROR (Rotate One Bit Right (Memory or Accumulator)) Accum
+        {
+            bool bit = a % 0b10;
+
+            a = 0x80 * sr.c + a / 0b10;
+
+            sr.c = bit;
+
+            return 0x01;
+        }
+
         case 0x6D: // ADC (Add Memory to Accumulator with Carry) ABS
         {
             a = a + memory[ABS_ADDR] + sr.c;
 
             sr.c = (memory[ABS_ADDR] + sr.c > a);
+
+            return 0x03;
+        }
+
+        case 0x6E: // ROR (Rotate One Bit Right (Memory or Accumulator)) ABS
+        {
+            bool bit = memory[ABS_ADDR] % 0b10;
+
+            memory[ABS_ADDR] = 0x80 * sr.c + memory[ABS_ADDR] / 0b10;
+
+            sr.c = bit;
 
             return 0x03;
         }
@@ -288,6 +473,18 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             a = a + memory[addr] + sr.c;
 
             sr.c = (memory[addr] + sr.c > a);
+
+            return 0x02;
+        }
+
+        case 0x76: // ROR (Rotate One Bit Right (Memory or Accumulator)) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            bool bit = memory[addr] % 0b10;
+
+            memory[addr] = 0x80 * sr.c + memory[addr] / 0b10;
+
+            sr.c = bit;
 
             return 0x02;
         }
@@ -315,6 +512,18 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             a = a + memory[addr] + sr.c;
 
             sr.c = (memory[addr] + sr.c > a);
+
+            return 0x03;
+        }
+
+        case 0x7E: // ROR (Rotate One Bit Right (Memory or Accumulator)) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            bool bit = memory[addr] % 0b10;
+
+            memory[addr] = 0x80 * sr.c + memory[addr] / 0b10;
+
+            sr.c = bit;
 
             return 0x03;
         }

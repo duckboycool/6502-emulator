@@ -16,6 +16,7 @@ int main(int argc, char** argv) {
 
     int start = 0x0000;
     int rows = 8;
+    int rowsize = 16;
 
     for (int i = 1; i < argc; i++) {
         // Check for options
@@ -29,6 +30,7 @@ int main(int argc, char** argv) {
                     "  Options:\n"
                     "    -?        Display help and stop execution (this message).\n"
                     "    -mr {x}   Select the number of rows to print out when displaying memory (default 8).\n"
+                    "    -ml {x}   Select the length of rows to print out when displaying memory (default 16).\n"
                     "    -ms {x}   Select the starting value of memory to print rows from. Prefix with \"0x\" for hex input (default 0).\n"
                     "    --m       Disable the printing of memory once hitting a break (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
@@ -58,6 +60,23 @@ int main(int argc, char** argv) {
                 val >> x;
 
                 rows = x;
+
+                i++;
+            }
+
+            else if (argv[i] == string("-ml")) {
+                if (argc == i + 1) {
+                    printf("-ml requires an argument.\n");
+                    return 1;
+                }
+
+                // Parse int
+                int x = 0;
+                stringstream val(argv[i + 1]);
+
+                val >> x;
+
+                rowsize = x;
 
                 i++;
             }
@@ -148,23 +167,23 @@ int main(int argc, char** argv) {
     while (mvbytes != BRK_MOVE) {
         mvbytes = instruction(memory[pc], new unsigned char[] {memory[pc + 1], memory[pc + 2]});
 
-        if (ins_print) printf("%04X %02X - A: %02X X: %02X Y: %02X\n", pc, memory[pc], a, x, y);
+        if (ins_print) printf("%04X %02X - A: %02X X: %02X Y: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", pc, memory[pc], a, x, y, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
 
         // Increment program counter
         pc += mvbytes;
     }
 
     if (mem_print) {
-        printf("\n");
-
         // Output of memory once finished (rows of 8 bytes)
-        for (int i = 0; i < rows && 0x08 * (1 + i) + start <= 0x10000; i++) {
-            for (int j = 0; j < 0x08; j++) {
-                printf("%02X ", memory[0x08 * i + j + start]);
-            }
+        for (int i = 0; i < rows && rowsize * (1 + i) + start <= 0x10000; i++) {
+            printf("\n%04X: ", rowsize * i + start);
 
-            printf("\n");
+            for (int j = 0; j < rowsize; j++) {
+                printf("%02X ", memory[rowsize * i + j + start]);
+            }
         }
+
+        printf("\n");
     }
 
     return 0;

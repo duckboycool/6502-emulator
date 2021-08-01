@@ -49,7 +49,7 @@ unsigned short pc;
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops ADC, ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CLC, CLD, CLI, CLV, CMP, CPX, CPY, JMP, JSR, LSR, PHA, PHP, PLA, PLP, ROL, ROR, RTI, RTS, SBC, SEC, SED, SEI
+    Ops ASL, BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CMP, CPX, CPY, JMP, JSR, LSR, PHA, PHP, PLA, PLP, ROL, ROR, RTI, RTS
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
 */
 unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
@@ -96,6 +96,13 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             a = a | memory[addr];
 
             return 0x02;
+        }
+
+        case 0x18: // CLC (Clear Carry Flag) Implied
+        {
+            sr.c = false;
+
+            return 0x01;
         }
 
         case 0x19: // ORA ("OR" Memory with Accumulator) ABS, Y
@@ -153,6 +160,13 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x38: // SEC (Set Carry Flag) Implied
+        {
+            sr.c = true;
+
+            return 0x01;
+        }
+
         case 0x39: // AND ("AND" Memory with Accumulator) ABS, Y
         {
             unsigned short addr = ABS_ADDR + y;
@@ -208,6 +222,13 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0x58: // CLI (Clear Interrupt Disable Bit) Implied
+        {
+            sr.i = false;
+
+            return 0x01;
+        }
+
         case 0x59: // EOR ("Exclusive-OR" Memory with Accumulator) ABS, Y
         {
             unsigned short addr = ABS_ADDR + y;
@@ -220,6 +241,80 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
         {
             unsigned short addr = ABS_ADDR + x;
             a = a ^ memory[addr];
+
+            return 0x03;
+        }
+
+        case 0x61: // ADC (IND, X)
+        {
+            break;
+        }
+
+        case 0x65: // ADC (Add Memory to Accumulator with Carry) ZP
+        {
+            a = a + memory[ops[0]] + sr.c;
+
+            sr.c = (memory[ops[0]] + sr.c > a);
+
+            return 0x02;
+        }
+
+        case 0x69: // ADC (Add Memory to Accumulator with Carry) IMM
+        {
+            a = a + ops[0] + sr.c;
+
+            sr.c = (ops[0] + sr.c > a);
+
+            return 0x02;
+        }
+
+        case 0x6D: // ADC (Add Memory to Accumulator with Carry) ABS
+        {
+            a = a + memory[ABS_ADDR] + sr.c;
+
+            sr.c = (memory[ABS_ADDR] + sr.c > a);
+
+            return 0x03;
+        }
+
+        case 0x71: // ADC (IND), Y
+        {
+            break;
+        }
+
+        case 0x75: // ADC (Add Memory to Accumulator with Carry) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            a = a + memory[addr] + sr.c;
+
+            sr.c = (memory[addr] + sr.c > a);
+
+            return 0x02;
+        }
+
+        case 0x78: // SEI (Set Interrupt Disable Status) Implied
+        {
+            sr.i = true;
+
+            return 0x01;
+        }
+
+        case 0x79: // ADC (Add Memory to Accumulator with Carry) ABS, Y
+        {
+            unsigned short addr = ABS_ADDR + y;
+            a = a + memory[addr] + sr.c;
+
+            sr.c = (memory[addr] + sr.c > a);
+
+            return 0x03;
+        }
+
+        case 0x7D: // ADC (Add Memory to Accumulator with Carry) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            a = a + memory[addr] + sr.c;
+
+            sr.c = (memory[addr] + sr.c > a);
 
             return 0x03;
         }
@@ -452,6 +547,13 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
 
             return 0x02;
         }
+        
+        case 0xB8: // CLV (Clear Overflow Flag)
+        {
+            sr.v = false;
+
+            return 0x01;
+        }
 
         case 0xB9: // LDA (Load Accumulator with Memory) ABS, Y
         {
@@ -526,12 +628,33 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x02;
         }
 
+        case 0xD8: // CLD (Clear Decimal Mode) Implied
+        {
+            sr.d = false;
+
+            return 0x01;
+        }
+
         case 0xDE: // DEC (Decrement Memory by One) ABS, X
         {
             unsigned short addr = ABS_ADDR + x;
             memory[addr]--;
 
             return 0x03;
+        }
+
+        case 0xE1: // SBC (IND, X)
+        {
+            break;
+        }
+
+        case 0xE5: // SBC (Subtract Memory from Accumulator with Borrow) ZP
+        {
+            a = a - memory[ops[0]] - !sr.c;
+
+            sr.c = (- memory[ops[0]] - !sr.c < a);
+
+            return 0x02;
         }
 
         case 0xE6: // INC (Increment Memory by One) ZP
@@ -548,9 +671,27 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x01;
         }
 
+        case 0xE9: // SBC (Subtract Memory from Accumulator with Borrow) IMM
+        {
+            a = a - ops[0] - !sr.c;
+
+            sr.c = (- ops[0] - !sr.c < a);
+
+            return 0x02;
+        }
+
         case 0xEA: // NOP (No Operation) Implied
         {
             return 0x01;
+        }
+
+        case 0xED: // SBC (Subtract Memory from Accumulator with Borrow) ABS
+        {
+            a = a - memory[ABS_ADDR] - !sr.c;
+
+            sr.c = (- memory[ABS_ADDR] - !sr.c < a);
+
+            return 0x03;
         }
         
         case 0xEE: // INC (Increment Memory by One) ABS
@@ -560,12 +701,54 @@ unsigned char instruction(unsigned char opcode, unsigned char ops[]) {
             return 0x03;
         }
 
+        case 0xF1: // SBC (IND), Y
+        {
+            break;
+        }
+
+        case 0xF5: // SBC (Subtract Memory from Accumulator with Borrow) ZP, X
+        {
+            unsigned char addr = ops[0] + x;
+            a = a - memory[addr] - !sr.c;
+
+            sr.c = (- memory[addr] - !sr.c < a);
+
+            return 0x02;
+        }
+
         case 0xF6: // INC (Increment Memory by One) ZP, X
         {
             unsigned char addr = ops[0] + x;
             memory[addr]++;
 
             return 0x02;
+        }
+
+        case 0xF8: // SED (Set Decimal Mode) Implied
+        {
+            sr.d = true;
+
+            return 0x01;
+        }
+
+        case 0xF9: // SBC (Subtract Memory from Accumulator with Borrow) ABS, Y
+        {
+            unsigned short addr = ABS_ADDR + y;
+            a = a - memory[addr] - !sr.c;
+
+            sr.c = (- memory[addr] - !sr.c < a);
+
+            return 0x03;
+        }
+
+        case 0xFD: // SBC (Subtract Memory from Accumulator with Borrow) ABS, X
+        {
+            unsigned short addr = ABS_ADDR + x;
+            a = a - memory[addr] - !sr.c;
+
+            sr.c = (- memory[addr] - !sr.c < a);
+
+            return 0x03;
         }
 
         case 0xFE: // INC (Increment Memory by One) ABS, X

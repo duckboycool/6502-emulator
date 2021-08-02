@@ -3,6 +3,12 @@
 
 #include "ops.h"
 
+#ifdef _WIN32
+#define EXESTRING "6502.exe"
+#else
+#define EXESTRING "6502"
+#endif
+
 // TODO: Enable printing address (FFF9?)
 int main(int argc, char** argv) {
     // Handle options and file
@@ -24,7 +30,7 @@ int main(int argc, char** argv) {
                 printf(
                     "6502 HELP\n"
                     "  Usage:\n"
-                    "    6502.exe [-options | --flags] [-o code] [-f] {file}\n"
+                    "    %s [-options | --flags] [-o code] [-f] {file}\n"
                     "\n"
                     "  Options:\n"
                     "    -?        Display help and stop execution (this message).\n"
@@ -34,7 +40,8 @@ int main(int argc, char** argv) {
                     "    --m       Disable the printing of memory once hitting a break (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
                     "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
-                    "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n"
+                    "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n",
+                    EXESTRING
                     );
                 return -1;
             }

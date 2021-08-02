@@ -1,12 +1,11 @@
 #include <stdio.h>
-#include <iostream>
+
 #include <fstream>
-#include <string>
 #include <sstream>
 
 #include "ops.h"
 
-// TODO: CLI options to disable printing of ops and memory, set printing start and rows, enable printing address (FFF9?)
+// TODO: Enable printing address (FFF9?)
 int main(int argc, char** argv) {
     // Handle options and file
     bool mem_print = true;
@@ -18,6 +17,8 @@ int main(int argc, char** argv) {
     int rows = 8;
     int rowsize = 16;
 
+    string codestring;
+
     for (int i = 1; i < argc; i++) {
         // Check for options
         if (argv[i][0] == '-') {
@@ -25,7 +26,7 @@ int main(int argc, char** argv) {
                 printf(
                     "6502 HELP\n"
                     "  Usage:\n"
-                    "    6502.exe [-options | --flags] [-f] {file}\n"
+                    "    6502.exe [-options | --flags] [-o code] [-f] {file}\n"
                     "\n"
                     "  Options:\n"
                     "    -?        Display help and stop execution (this message).\n"
@@ -34,6 +35,7 @@ int main(int argc, char** argv) {
                     "    -ms {x}   Select the starting value of memory to print rows from. Prefix with \"0x\" for hex input (default 0).\n"
                     "    --m       Disable the printing of memory once hitting a break (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
+                    "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
                     "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n"
                     );
                 return -1;
@@ -107,6 +109,16 @@ int main(int argc, char** argv) {
                 i++;
             }
 
+            else if (argv[i] == string("-o")) {
+                if (argc == i + 1) {
+                    printf("-o requires an argument.\n");
+                    return 1;
+                }
+
+                codestring = argv[i + 1];
+                break;
+            }
+
             else if (argv[i] == string("-f")) {
                 if (argc == i + 1) {
                     printf("-f requires an argument.\n");
@@ -129,23 +141,25 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (file == NULL) {
-        printf("You must input a file. Input \"-?\" for help.\n");
-        return 1;
+    if (codestring.empty()) {
+        if (file == NULL) {
+            printf("You must input a file or code. Input \"-?\" for help.\n");
+            return 1;
+        }
+
+        // Get raw data from file
+        ifstream CodeFile(file);
+
+        if (!CodeFile.good()) {
+            printf("File \"%s\" not found.\n", file);
+            return 1;
+        }
+
+        stringstream buffer;
+        buffer << CodeFile.rdbuf();
+
+        codestring = buffer.str();
     }
-
-    // Get raw data from file
-    ifstream CodeFile(file);
-
-    if (!CodeFile.good()) {
-        printf("File \"%s\" not found.\n", file);
-        return 1;
-    }
-
-    stringstream buffer;
-    buffer << CodeFile.rdbuf();
-
-    string codestring = buffer.str();
     
     // Initialize with 0 (not sure why this isn't already)
     for (int i = 0; i < 0x10000; i++) {

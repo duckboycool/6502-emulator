@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #include <fstream>
 #include <sstream>
 
@@ -179,7 +177,7 @@ int main(int argc, char** argv) {
 
     // Instruction loop
     while (mvbytes != BRK_MOVE) {
-        mvbytes = instruction(memory[pc], new unsigned char[] {memory[pc + 1], memory[pc + 2]});
+        mvbytes = instruction(memory[pc], new (unsigned char[2]) {memory[pc + 1], memory[pc + 2]});
 
         if (ins_print) printf("%04X %02X - A: %02X X: %02X Y: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", pc, memory[pc], a, x, y, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
 

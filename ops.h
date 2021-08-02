@@ -60,16 +60,16 @@ byte2 pc;
 #define ZP (memory[ops[0]]);\
     return 0x02;               // Value at address of next byte with high byte (page) of 0
 #define ZP_X \
-  (byte(memory[ops[0]] + x));\
+  ((byte)(memory[ops[0]] + x));\
     return 0x02;               // Value at address of next byte with high byte 0, indexed to x
 #define ZP_Y \
-  (byte(memory[ops[0]] + y));\
+  ((byte)(memory[ops[0]] + y));\
     return 0x02;               // ^, indexed to y
 #define ABS_X \
-  (byte2(ABS_ADDR + x));\
+  ((byte2)(ABS_ADDR + x));\
     return 0x03;               // Value at address of next two bytes, indexed to x
 #define ABS_Y \
-  (byte2(ABS_ADDR + y));\
+  ((byte2)(ABS_ADDR + y));\
     return 0x03;               // ^, indexed to y
 #define Implied ();\
     return 0x01;               // No arguments (implied from instruction)

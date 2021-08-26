@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fstream>
 #include <sstream>
 
@@ -9,10 +10,28 @@
 #define EXESTRING "6502"
 #endif
 
+#define VERSIONSTRING "v0.2.0-dev"
+
+string ascii(byte2 memaddr, int size) {
+    string out = "";
+
+    for (int val = 0; val < size; val++) {
+        char memval = memory[memaddr + val];
+        if (memval >= 0x20 && memval <= 0x7e) { // From spacebar to tilde
+            out += memval;
+        } else {
+            out += '.'; // Period for other characters
+        }
+    }
+
+    return out;
+}
+
 // TODO: Enable printing address (FFF9?)
 int main(int argc, char** argv) {
     // Handle options and file
     bool mem_print = true;
+    bool asc_print = true;
     bool ins_print = true;
 
     char* file = NULL;
@@ -28,7 +47,7 @@ int main(int argc, char** argv) {
         if (argv[i][0] == '-') {
             if (argv[i] == string("-?")) {
                 printf(
-                    "6502 HELP\n"
+                    "6502 %s HELP\n"
                     "  Usage:\n"
                     "    %s [-options | --flags] [-o code] [-f] {file}\n"
                     "\n"
@@ -38,9 +57,11 @@ int main(int argc, char** argv) {
                     "    -ml {x}   Select the length of rows to print out when displaying memory (default 16).\n"
                     "    -ms {x}   Select the starting value of memory to print rows from. Prefix with \"0x\" for hex input (default 0).\n"
                     "    --m       Disable the printing of memory once hitting a break (default true).\n"
+                    "    --a       Disable ascii representation of printed memory (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
                     "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
                     "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n",
+                    VERSIONSTRING,
                     EXESTRING
                     );
                 return -1;
@@ -48,6 +69,10 @@ int main(int argc, char** argv) {
 
             else if (argv[i] == string("--m")) {
                 mem_print = false;
+            }
+
+            else if (argv[i] == string("--a")) {
+                asc_print = false;
             }
 
             else if (argv[i] == string("--i")) {
@@ -200,6 +225,8 @@ int main(int argc, char** argv) {
             for (int j = 0; j < rowsize; j++) {
                 printf("%02X ", memory[rowsize * i + j + start]);
             }
+
+            if (asc_print) cout << "| " + ascii(rowsize * i + start, rowsize);
         }
 
         printf("\n");

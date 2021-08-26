@@ -17,6 +17,7 @@ Here is the list of options.
     -ml {x}   Select the length of rows to print out when displaying memory (default 16).
     -ms {x}   Select the starting value of memory to print rows from. Prefix with "0x" for hex input (default 0).
     --m       Disable the printing of memory once hitting a break (default true).
+    --a       Disable ascii representation of printed memory (default true).
     --i       Disable the printing of instructions while executing (default true).
     -o {x}    Directly input assembled machine code as string and ignore rest of input.
     -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).

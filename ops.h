@@ -50,6 +50,29 @@ const byte BRK_MOVE = 0xFF; // Constant that represents a break when returned by
 // Program counter, current place in program
 byte2 pc;
 
+// Option flags
+// Printout of memory and instructions
+bool mem_print = true;
+bool asc_print = true;
+bool ins_print = true;
+// Print value if on printing address and enabled
+byte print_addr = 0xFFF9;
+bool print_out = false;
+
+string endprint = ""; // Printed out after program stops
+
+void st_print(byte addr, int val) {
+    if (addr == print_addr && print_out) {
+        // Print at end if printing memory or instructions (so no overlap), otherwise, print now
+        if (mem_print || ins_print) {
+            endprint += (char)val;
+            return;
+        }
+
+        printf("%c", (char)val);
+    }
+}
+
 // Define addressing modes
 #define Accum (a);\
     return 0x01;               // Accumulator as an argument
@@ -151,16 +174,22 @@ void SEI() {
 
 template <typename T>
 void STA(T&& addr) {
+    st_print(addr, a);
+
     addr = a;
 }
 
 template <typename T>
 void STY(T&& addr) {
+    st_print(addr, y);
+
     addr = y;
 }
 
 template <typename T>
 void STX(T&& addr) {
+    st_print(addr, x);
+
     addr = x;
 }
 
@@ -246,7 +275,7 @@ void SED() {
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BRK, BVC, BVS, CMP, CPX, CPY, JMP, JSR, PHA, PHP, PLA, PLP, RTI, RTS
+    Ops BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BVC, BVS, CMP, CPX, CPY, JMP, JSR, PHA, PHP, PLA, PLP, RTI, RTS
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
     Check for if ops set other flags
 */

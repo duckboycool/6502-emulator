@@ -10,8 +10,9 @@
 #define EXESTRING "6502"
 #endif
 
-#define VERSIONSTRING "v0.2.0-dev"
+#define VERSIONSTRING "v0.2.1-dev"
 
+// Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {
     string out = "";
 
@@ -27,13 +28,9 @@ string ascii(byte2 memaddr, int size) {
     return out;
 }
 
-// TODO: Enable printing address (FFF9?)
+// TODO: Possible refactoring
 int main(int argc, char** argv) {
     // Handle options and file
-    bool mem_print = true;
-    bool asc_print = true;
-    bool ins_print = true;
-
     char* file = NULL;
 
     int start = 0x0000;
@@ -59,6 +56,8 @@ int main(int argc, char** argv) {
                     "    --m       Disable the printing of memory once hitting a break (default true).\n"
                     "    --a       Disable ascii representation of printed memory (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
+                    "    --p       Enable the printing address (will only print at end if --m or --i) (default false).\n"
+                    "    -pa       Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).\n"
                     "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
                     "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n",
                     VERSIONSTRING,
@@ -77,6 +76,10 @@ int main(int argc, char** argv) {
 
             else if (argv[i] == string("--i")) {
                 ins_print = false;
+            }
+
+            else if (argv[i] == string("--p")) {
+                print_out = true;
             }
 
             else if (argv[i] == string("-mr")) {
@@ -135,6 +138,31 @@ int main(int argc, char** argv) {
                 }
                 
                 start = x;
+
+                i++;
+            }
+
+            else if (argv[i] == string("-pa")) {
+                if (argc == i + 1) {
+                    printf("-pa requires an argument.\n");
+                    return 1;
+                }
+
+                int x = 0;
+
+                stringstream val(argv[i + 1]);
+
+                // Parse hex input
+                if (string(argv[i + 1]).substr(0, 2) == "0x") {
+                    x = stoul(argv[i + 1], nullptr, 16);
+                }
+
+                // Parse int
+                else {
+                    val >> x;
+                }
+                
+                print_addr = x;
 
                 i++;
             }
@@ -231,6 +259,8 @@ int main(int argc, char** argv) {
 
         printf("\n");
     }
+
+    cout << endprint << '\n';
 
     return 0;
 }

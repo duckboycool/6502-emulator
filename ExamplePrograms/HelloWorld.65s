@@ -1,0 +1,27 @@
+  ; Example hello world program, will improve with other instructions when implemented
+
+  LDA #$48
+  STA $FFF9
+  LDA #$65
+  STA $FFF9
+  LDA #$6C
+  STA $FFF9
+  LDA #$6C
+  STA $FFF9
+  LDA #$6F
+  STA $FFF9
+  LDA #$20
+  STA $FFF9
+  LDA #$77
+  STA $FFF9
+  LDA #$6F
+  STA $FFF9
+  LDA #$72
+  STA $FFF9
+  LDA #$6C
+  STA $FFF9
+  LDA #$64
+  STA $FFF9
+  LDA #$21
+  STA $FFF9
+  BRK

@@ -19,8 +19,12 @@ Here is the list of options.
     --m       Disable the printing of memory once hitting a break (default true).
     --a       Disable ascii representation of printed memory (default true).
     --i       Disable the printing of instructions while executing (default true).
+    --p       Enable the printing address (will only print at end if --m or --i) (default false).
+    -pa       Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).
     -o {x}    Directly input assembled machine code as string and ignore rest of input.
     -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).
 ```
 
 You will need to assemble your program from 6502 assembly before inputting it into `6502.exe`.
+
+There are example programs in the `ExamplePrograms` folder. The examples come both in 6502 assembly source (`.65s` files) and assembled machine code (`.out` files).

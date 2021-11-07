@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
                     "    --a       Disable ascii representation of printed memory (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
                     "    --p       Enable the printing address (will only print at end if --m or --i) (default false).\n"
-                    "    -pa       Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).\n"
+                    "    -pa {x}   Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).\n"
                     "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
                     "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n",
                     VERSIONSTRING,
@@ -233,13 +233,15 @@ int main(int argc, char** argv) {
     pc = 0x100 * memory[0xFFFD] + memory[0xFFFC];
 
     // Amount of bytes to move (0xFF means break)
-    unsigned char mvbytes = 0;
+    byte mvbytes = 0;
 
     // Instruction loop
     while (mvbytes != BRK_MOVE) {
-        mvbytes = instruction(memory[pc], new (unsigned char[2]) {memory[pc + 1], memory[pc + 2]});
+        if (ins_print) printf("%04X %02X - ", pc, memory[pc]); // Print position and instruction before running (which might change program counter)
 
-        if (ins_print) printf("%04X %02X - A: %02X X: %02X Y: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", pc, memory[pc], a, x, y, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
+        mvbytes = instruction(memory[pc], new (byte[2]) {memory[pc + 1], memory[pc + 2]});
+
+        if (ins_print) printf("A: %02X X: %02X Y: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", a, x, y, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
 
         // Increment program counter
         pc += mvbytes;

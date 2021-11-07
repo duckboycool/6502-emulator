@@ -18,6 +18,9 @@ byte* memory = new byte[0x10000];
 // Accumulator, x and y registers
 byte a, x, y;
 
+// Stack pointer
+byte sp;
+
 // Flags / Status Register
 struct StatusRegister {
     bool n = false; // Negative flag
@@ -96,7 +99,8 @@ void st_print(byte addr, int val) {
     return 0x03;               // ^, indexed to y
 #define Implied ();\
     return 0x01;               // No arguments (implied from instruction)
-// #define Relative
+ #define Relative ((char)ops[0]);\
+    return 0x02;               // First value as argument (interpreted as -128 to 127)
 // #define IND_X
 // #define IND_Y
 // #define Indirect
@@ -112,6 +116,11 @@ void ASL(T&& addr) { // Evil
     sr.c = addr / 0x80;
 
     addr = addr * 0b10;
+}
+
+template <typename T>
+void BPL(T val) {
+    if (!sr.n) pc += val;
 }
 
 void CLC() {
@@ -132,6 +141,11 @@ void AND(T val) {
     a = a & val;
 }
 
+template <typename T>
+void BMI(T val) {
+    if (sr.n) pc += val;
+}
+
 void SEC() {
     sr.c = true;
 }
@@ -146,6 +160,16 @@ void LSR(T&& addr) {
     sr.c = addr % 0b10;
 
     addr = addr / 0b10;
+}
+
+template <typename T>
+void JMP(T val) {
+    pc = val;
+}
+
+template <typename T>
+void BVC(T val) {
+    if (!sr.v) pc += val;
 }
 
 void CLI() {
@@ -166,6 +190,11 @@ void ROR(T&& addr) {
     addr = 0x80 * sr.c + addr / 0b10;
 
     sr.c = bit;
+}
+
+template <typename T>
+void BVS(T val) {
+    if (sr.v) pc += val;
 }
 
 void SEI() {
@@ -201,8 +230,17 @@ void TXA() {
     a = x;
 }
 
+template <typename T>
+void BCC(T val) {
+    if (!sr.c) pc += val;
+}
+
 void TYA() {
     a = y;
+}
+
+void TXS() {
+    sp = x;
 }
 
 template <typename T>
@@ -228,8 +266,17 @@ void TAX() {
     x = a;
 }
 
+template <typename T>
+void BCS(T val) {
+    if (sr.c) pc += val;
+}
+
 void CLV() {
     sr.v = false;
+}
+
+void TSX() {
+    x = sp;
 }
 
 template <typename T>
@@ -243,6 +290,11 @@ void INY() {
 
 void DEX() {
     x--;
+}
+
+template <typename T>
+void BNE(T val) {
+    if (!sr.z) pc += val;
 }
 
 void CLD() {
@@ -269,13 +321,18 @@ void NOP() {
     
 }
 
+template <typename T>
+void BEQ(T val) {
+    if (sr.z) pc += val;
+}
+
 void SED() {
     sr.d = true;
 }
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops BCC, BCS, BEQ, BIT, BMI, BNE, BPL, BVC, BVS, CMP, CPX, CPY, JMP, JSR, PHA, PHP, PLA, PLP, RTI, RTS
+    Ops BIT, CMP, CPX, CPY, JSR, PHA, PHP, PLA, PLP, RTI, RTS
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
     Check for if ops set other flags
 */
@@ -319,6 +376,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x0E: // ASL (Shift Left One Bit (Memory or Accumulator)) ABS
         {
             ASL ABS
+        }
+
+        case 0x10: // BPL (Branch on Result Plus) Relative
+        {
+            BPL Relative
         }
 
         case 0x11: // ORA (IND), Y
@@ -390,6 +452,11 @@ static byte instruction(byte opcode, byte ops[]) {
         {
             ROL ABS
         }
+
+        case 0x30: // BMI (Branch on Result Minus) Relative
+        {
+            BMI Relative
+        }
         
         case 0x31: // AND (IND), Y
         {
@@ -451,6 +518,11 @@ static byte instruction(byte opcode, byte ops[]) {
             LSR Accum
         }
 
+        case 0x4C: // JMP (Jump to New Location) ABS
+        {
+            JMP ABS
+        }
+
         case 0x4D: // EOR ("Exclusive-OR" Memory with Accumulator) ABS
         {
             EOR ABS
@@ -459,6 +531,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x4E: // LSR (Shift One Bit Right (Memory or Accumulator)) ABS
         {
             LSR ABS
+        }
+
+        case 0x50: // BVC (Branch on Overflow Clear) Relative
+        {
+            BVC Relative
         }
 
         case 0x51: // EOR (IND), Y
@@ -521,6 +598,11 @@ static byte instruction(byte opcode, byte ops[]) {
             ROR Accum
         }
 
+        case 0x6C: // JMP Indirect
+        {
+            break;
+        }
+
         case 0x6D: // ADC (Add Memory to Accumulator with Carry) ABS
         {
             ADC ABS
@@ -529,6 +611,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x6E: // ROR (Rotate One Bit Right (Memory or Accumulator)) ABS
         {
             ROR ABS
+        }
+
+        case 0x70: // BVS (Branch on Overflow Set) Relative
+        {
+            BVS Relative
         }
 
         case 0x71: // ADC (IND), Y
@@ -611,6 +698,11 @@ static byte instruction(byte opcode, byte ops[]) {
             STX ABS
         }
 
+        case 0x90: // BCC (Branch on Carry Clear) Relative
+        {
+            BCC Relative
+        }
+
         case 0x91: // STA (IND), Y
         {
             break;
@@ -641,9 +733,9 @@ static byte instruction(byte opcode, byte ops[]) {
             STA ABS_Y
         }
 
-        case 0x9A: // TXS Implied
+        case 0x9A: // TXS (Transfer Index X to Stack Register) Implied
         {
-            break;
+            TXS Implied
         }
 
         case 0x9D: // STA (Store Accumulator in Memory) ABS, X
@@ -711,6 +803,11 @@ static byte instruction(byte opcode, byte ops[]) {
             LDX ABS
         }
 
+        case 0xB0: // BCS (Branch on Carry Set) Relative
+        {
+            BCS Relative
+        }
+
         case 0xB1: // LDA (IND), Y
         {
             break;
@@ -741,9 +838,9 @@ static byte instruction(byte opcode, byte ops[]) {
             LDA ABS_Y
         }
 
-        case 0xBA: // TSX Implied
+        case 0xBA: // TSX (Transfer Stack Pointer to Index X) Implied
         {
-            break;
+            TSX Implied
         }
 
         case 0xBC: // LDY (Load Index Y with Memory) ABS, X
@@ -779,6 +876,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0xCE: // DEC (Decrement Memory by One) ABS
         {
             DEC ABS
+        }
+
+        case 0xD0: // BNE (Branch on Result not Zero) Relative
+        {
+            BNE Relative
         }
 
         case 0xD6: // DEC (Decrement Memory by One) ZP, X
@@ -834,6 +936,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0xEE: // INC (Increment Memory by One) ABS
         {
             INC ABS
+        }
+
+        case 0xF0: // BEQ (Branch on Result Zero) Relative
+        {
+            BEQ Relative
         }
 
         case 0xF1: // SBC (IND), Y

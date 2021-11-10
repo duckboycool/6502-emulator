@@ -86,10 +86,10 @@ void st_print(byte addr, int val) {
 #define ZP (memory[ops[0]]);\
     return 0x02;               // Value at address of next byte with high byte (page) of 0
 #define ZP_X \
-  ((byte)(memory[ops[0]] + x));\
+  (memory[(byte)(ops[0] + x)]);\
     return 0x02;               // Value at address of next byte with high byte 0, indexed to x
 #define ZP_Y \
-  ((byte)(memory[ops[0]] + y));\
+  (memory[(byte)(ops[0] + y)]);\
     return 0x02;               // ^, indexed to y
 #define ABS_X \
   ((byte2)(ABS_ADDR + x));\
@@ -139,6 +139,14 @@ void ROL(T&& addr) {
 template <typename T>
 void AND(T val) {
     a = a & val;
+}
+
+template <typename T>
+void BIT(T val) {
+    sr.n = 0b10000000 & val;
+    sr.v = 0b01000000 & val;
+    
+    sr.z = !(a & val);
 }
 
 template <typename T>
@@ -280,6 +288,20 @@ void TSX() {
 }
 
 template <typename T>
+void CPY(T val) {
+    sr.n = (y - val) & 0b10000000;
+    sr.z = !(y - val);
+    sr.c = y >= val;
+}
+
+template <typename T>
+void CMP(T val) {
+    sr.n = (a - val) & 0b10000000;
+    sr.z = !(a - val);
+    sr.c = a >= val;
+}
+
+template <typename T>
 void DEC(T&& addr) {
     addr--;
 }
@@ -299,6 +321,13 @@ void BNE(T val) {
 
 void CLD() {
     sr.d = false;
+}
+
+template <typename T>
+void CPX(T val) {
+    sr.n = (x - val) & 0b10000000;
+    sr.z = !(x - val);
+    sr.c = x >= val;
 }
 
 template <typename T>
@@ -332,7 +361,7 @@ void SED() {
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops BIT, CMP, CPX, CPY, JSR, PHA, PHP, PLA, PLP, RTI, RTS
+    Ops JSR, PHA, PHP, PLA, PLP, RTI, RTS
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
     Check for if ops set other flags
 */
@@ -423,6 +452,11 @@ static byte instruction(byte opcode, byte ops[]) {
             break;
         }
 
+        case 0x24: // BIT (Test Bits in Memory with Accumulator) ZP
+        {
+            BIT ZP
+        }
+
         case 0x25: // AND ("AND" Memory with Accumulator) ZP
         {
             AND ZP
@@ -441,6 +475,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x2A: // ROL (Rotate One Bit Left (Memory or Accumulator)) Accum
         {
             ROL Accum
+        }
+
+        case 0x2C: // BIT (Test Bits in Memory with Accumulator) ABS
+        {
+            BIT ABS
         }
 
         case 0x2D: // AND ("AND" Memory with Accumulator) ABS
@@ -858,6 +897,26 @@ static byte instruction(byte opcode, byte ops[]) {
             LDX ABS_Y
         }
 
+        case 0xC0: // CPY (Compare Memory and Index Y) IMM
+        {
+            CPY IMM
+        }
+
+        case 0xC1: // CMP (IND, X)
+        {
+            break;
+        }
+
+        case 0xC4: // CPY (Compare Memory and Index Y) ZP
+        {
+            CPY ZP
+        }
+
+        case 0xC5: // CMP (Compare Memory and Accumulator) ZP
+        {
+            CMP ZP
+        }
+
         case 0xC6: // DEC (Decrement Memory by One) ZP
         {
             DEC ZP
@@ -868,9 +927,24 @@ static byte instruction(byte opcode, byte ops[]) {
             INY Implied
         }
 
+        case 0xC9: // CMP (Compare Memory and Accumulator) IMM
+        {
+            CMP IMM
+        }
+
         case 0xCA: // DEX (Decrement Index X by One) Implied
         {
             DEX Implied
+        }
+
+        case 0xCC: // CPY (Compare Memory and Index Y) ABS
+        {
+            CPY ABS
+        }
+
+        case 0xCD: // CMP (Compare Memory and Accumulator) ABS
+        {
+            CMP ABS
         }
 
         case 0xCE: // DEC (Decrement Memory by One) ABS
@@ -883,6 +957,16 @@ static byte instruction(byte opcode, byte ops[]) {
             BNE Relative
         }
 
+        case 0xD1: // CMP (IND), Y
+        {
+            break;
+        }
+
+        case 0xD5: // CMP (Compare Memory and Accumulator) ZP, X
+        {
+            CMP ZP_X
+        }
+
         case 0xD6: // DEC (Decrement Memory by One) ZP, X
         {
             DEC ZP_X
@@ -893,14 +977,34 @@ static byte instruction(byte opcode, byte ops[]) {
             CLD Implied
         }
 
+        case 0xD9: // CMP (Compare Memory and Accumulator) ABS, Y
+        {
+            CMP ABS_Y
+        }
+
+        case 0xDD: // CMP (Compare Memory and Accumulator) ABS, X
+        {
+            CMP ABS_X
+        }
+
         case 0xDE: // DEC (Decrement Memory by One) ABS, X
         {
             DEC ABS_X
         }
 
+        case 0xE0: // CPX (Compare Memory and Index X) IMM
+        {
+            CPX IMM
+        }
+
         case 0xE1: // SBC (IND, X)
         {
             break;
+        }
+
+        case 0xE4: // CPX (Compare Memory and Index X) ZP
+        {
+            CPX ZP
         }
 
         case 0xE5: // SBC (Subtract Memory from Accumulator with Borrow) ZP
@@ -926,6 +1030,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0xEA: // NOP (No Operation) Implied
         {
             NOP Implied
+        }
+
+        case 0xEC: // CPX (Compare Memory and Index X) ABS
+        {
+            CPX ABS
         }
 
         case 0xED: // SBC (Subtract Memory from Accumulator with Borrow) ABS

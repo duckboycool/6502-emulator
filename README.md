@@ -20,7 +20,7 @@ Here is the list of options.
     --a       Disable ascii representation of printed memory (default true).
     --i       Disable the printing of instructions while executing (default true).
     --p       Enable the printing address (will only print at end if --m or --i) (default false).
-    -pa       Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).
+    -pa {x}   Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).
     -o {x}    Directly input assembled machine code as string and ignore rest of input.
     -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).
 ```

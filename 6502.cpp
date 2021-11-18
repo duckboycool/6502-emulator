@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
                     val >> x;
                 }
                 
-                print_addr = x;
+                print_ptr = &memory[x];
 
                 i++;
             }

@@ -59,13 +59,13 @@ bool mem_print = true;
 bool asc_print = true;
 bool ins_print = true;
 // Print value if on printing address and enabled
-byte print_addr = 0xFFF9;
+byte* print_ptr = &memory[0xFFF9];
 bool print_out = false;
 
 string endprint = ""; // Printed out after program stops
 
-void st_print(byte addr, int val) {
-    if (addr == print_addr && print_out) {
+void st_print(byte* addr, int val) {
+    if (addr == print_ptr && print_out) {
         // Print at end if printing memory or instructions (so no overlap), otherwise, print now
         if (mem_print || ins_print) {
             endprint += (char)val;
@@ -81,7 +81,7 @@ void st_print(byte addr, int val) {
     return 0x01;               // Accumulator as an argument
 #define IMM (ops[0]);\
     return 0x02;               // Literal first value as an argument
-#define ABS (ABS_ADDR);\
+#define ABS (memory[ABS_ADDR]);\
     return 0x03;               // Value at address of next two bytes
 #define ZP (memory[ops[0]]);\
     return 0x02;               // Value at address of next byte with high byte (page) of 0
@@ -92,10 +92,10 @@ void st_print(byte addr, int val) {
   (memory[(byte)(ops[0] + y)]);\
     return 0x02;               // ^, indexed to y
 #define ABS_X \
-  ((byte2)(ABS_ADDR + x));\
+  (memory[(byte2)(ABS_ADDR + x)]);\
     return 0x03;               // Value at address of next two bytes, indexed to x
 #define ABS_Y \
-  ((byte2)(ABS_ADDR + y));\
+  (memory[(byte2)(ABS_ADDR + y)]);\
     return 0x03;               // ^, indexed to y
 #define Implied ();\
     return 0x01;               // No arguments (implied from instruction)
@@ -211,21 +211,21 @@ void SEI() {
 
 template <typename T>
 void STA(T&& addr) {
-    st_print(addr, a);
+    st_print(&addr, a);
 
     addr = a;
 }
 
 template <typename T>
 void STY(T&& addr) {
-    st_print(addr, y);
+    st_print(&addr, y);
 
     addr = y;
 }
 
 template <typename T>
 void STX(T&& addr) {
-    st_print(addr, x);
+    st_print(&addr, x);
 
     addr = x;
 }

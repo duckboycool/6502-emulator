@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
 
         mvbytes = instruction(memory[pc], new (byte[2]) {memory[pc + 1], memory[pc + 2]});
 
-        if (ins_print) printf("A: %02X X: %02X Y: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", a, x, y, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
+        if (ins_print) printf("A: %02X X: %02X Y: %02X S: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", a, x, y, sp, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
 
         // Increment program counter
         pc += mvbytes;

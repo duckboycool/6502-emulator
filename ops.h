@@ -19,7 +19,7 @@ byte* memory = new byte[0x10000];
 byte a, x, y;
 
 // Stack pointer
-byte sp;
+byte sp = 0xFF;
 
 // Flags / Status Register
 struct StatusRegister {
@@ -118,6 +118,11 @@ void ASL(T&& addr) { // Evil
     addr = addr * 0b10;
 }
 
+void PHP() {
+    memory[0x100 + sp] = sr.val();
+    sp--;
+}
+
 template <typename T>
 void BPL(T val) {
     if (!sr.n) pc += val;
@@ -125,6 +130,16 @@ void BPL(T val) {
 
 void CLC() {
     sr.c = false;
+}
+
+template <typename T>
+void JSR(T val) {
+    memory[0x100 + sp] = (pc + 2) / 0x100;
+    sp--;
+    memory[0x100 + sp] = (pc + 2) % 0x100;
+    sp--;
+
+    pc = memory[pc + 2] * 0x100 + memory[pc + 1] - 3; // FIXME: Possibly not ideal
 }
 
 template <typename T>
@@ -149,6 +164,20 @@ void BIT(T val) {
     sr.z = !(a & val);
 }
 
+void PLP() {
+    sp++;
+    byte val = memory[0x100 + sp];
+
+    sr.n = val & 0b10000000;
+    sr.v = val & 0b01000000;
+    sr._ = val & 0b00100000;
+    sr.b = val & 0b00010000;
+    sr.d = val & 0b00001000;
+    sr.i = val & 0b00000100;
+    sr.z = val & 0b00000010;
+    sr.c = val & 0b00000001;
+}
+
 template <typename T>
 void BMI(T val) {
     if (sr.n) pc += val;
@@ -156,6 +185,17 @@ void BMI(T val) {
 
 void SEC() {
     sr.c = true;
+}
+
+void RTI() {
+    PLP();
+
+    sp++;
+    byte2 val = memory[0x100 + sp];
+    sp++;
+    val += 0x100 * memory[0x100 + sp];
+
+    pc = val - 1;
 }
 
 template <typename T>
@@ -170,9 +210,14 @@ void LSR(T&& addr) {
     addr = addr / 0b10;
 }
 
+void PHA() {
+    memory[0x100 + sp] = a;
+    sp--;
+}
+
 template <typename T>
 void JMP(T val) {
-    pc = val;
+    pc = memory[pc + 2] * 0x100 + memory[pc + 1] - 3;
 }
 
 template <typename T>
@@ -182,6 +227,15 @@ void BVC(T val) {
 
 void CLI() {
     sr.i = false;
+}
+
+void RTS() {
+    sp++;
+    byte2 val = memory[0x100 + sp];
+    sp++;
+    val += 0x100 * memory[0x100 + sp];
+
+    pc = val;
 }
 
 template <typename T>
@@ -198,6 +252,11 @@ void ROR(T&& addr) {
     addr = 0x80 * sr.c + addr / 0b10;
 
     sr.c = bit;
+}
+
+void PLA() {
+    sp++;
+    a = memory[0x100 + sp];
 }
 
 template <typename T>
@@ -361,9 +420,9 @@ void SED() {
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Ops JSR, PHA, PHP, PLA, PLP, RTI, RTS
     Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
     Check for if ops set other flags
+    Properly set values on routines/BRK
 */
 static byte instruction(byte opcode, byte ops[]) {
     switch (opcode) {
@@ -385,6 +444,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x06: // ASL (Shift Left One Bit (Memory or Accumulator)) ZP
         {
             ASL ZP
+        }
+
+        case 0x08: // PHP (Push Processor Status on Stack) Implied
+        {
+            PHP Implied
         }
 
         case 0x09: // ORA ("OR" Memory with Accumulator) IMM
@@ -447,6 +511,11 @@ static byte instruction(byte opcode, byte ops[]) {
             ASL ABS_X
         }
 
+        case 0x20: // JSR (Jump to New Location Saving Return Address) ABS
+        {
+            JSR ABS
+        }
+
         case 0x21: // AND (IND, X)
         {
             break;
@@ -465,6 +534,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x26: // ROL (Rotate One Bit Left (Memory or Accumulator)) ZP
         {
             ROL ZP
+        }
+
+        case 0x28: // PLP (Pull Processor Status from Stack) Implied
+        {
+            PLP Implied
         }
 
         case 0x29: // AND ("AND" Memory with Accumulator) IMM
@@ -532,6 +606,11 @@ static byte instruction(byte opcode, byte ops[]) {
             ROL ABS_X
         }
 
+        case 0x40: // RTI (Return from Interrupt) Implied
+        {
+            RTI Implied
+        }
+
         case 0x41: // EOR (IND, X)
         {
             break;
@@ -545,6 +624,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x46: // LSR (Shift One Bit Right (Memory or Accumulator)) ZP
         {
             LSR ZP
+        }
+
+        case 0x48: // PHA (Push Accumulator on Stack) Implied
+        {
+            PHA Implied
         }
 
         case 0x49: // EOR ("Exclusive-OR" Memory with Accumulator) IMM
@@ -612,6 +696,11 @@ static byte instruction(byte opcode, byte ops[]) {
             LSR ABS_X
         }
 
+        case 0x60: // RTS (Return from Subroutine) Implied
+        {
+            RTS Implied
+        }
+
         case 0x61: // ADC (IND, X)
         {
             break;
@@ -625,6 +714,11 @@ static byte instruction(byte opcode, byte ops[]) {
         case 0x66: // ROR (Rotate One Bit Right (Memory or Accumulator)) ZP
         {
             ROR ZP
+        }
+
+        case 0x68: // PLA (Pull Accumulator from Stack) Implied
+        {
+            PLA Implied
         }
 
         case 0x69: // ADC (Add Memory to Accumulator with Carry) IMM

@@ -99,11 +99,12 @@ void st_print(byte* addr, int val) {
     return 0x03;               // ^, indexed to y
 #define Implied ();\
     return 0x01;               // No arguments (implied from instruction)
- #define Relative ((char)ops[0]);\
+#define Relative ((signed char)ops[0]);\
     return 0x02;               // First value as argument (interpreted as -128 to 127)
-// #define IND_X
-// #define IND_Y
-// #define Indirect
+#define IND_X (memory[memory[(byte)(ops[0] + x + 1)] * 0x100 + memory[(byte)(ops[0] + x)]]);\
+    return 0x02;               // Value at indexed indirect x memory location
+#define IND_Y (memory[(byte2)(memory[(byte)(ops[0] + 1)] * 0x100 + y + memory[ops[0]])]);\
+    return 0x02;               // Value at indirect indexed y memory location
 
 // Define instructions
 template <typename T>
@@ -213,11 +214,6 @@ void LSR(T&& addr) {
 void PHA() {
     memory[0x100 + sp] = a;
     sp--;
-}
-
-template <typename T>
-void JMP(T val) {
-    pc = memory[pc + 2] * 0x100 + memory[pc + 1] - 3;
 }
 
 template <typename T>
@@ -420,7 +416,6 @@ void SED() {
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Addressing Modes (IND, [X, Y]) and (IND), [X, Y]
     Check for if ops set other flags
     Properly set values on routines/BRK
 */
@@ -431,9 +426,9 @@ static byte instruction(byte opcode, byte ops[]) {
             return BRK_MOVE;
         }
 
-        case 0x01: // ORA (IND, X)
+        case 0x01: // ORA ("OR" Memory with Accumulator) (IND, X)
         {
-            break;
+            ORA IND_X
         }
 
         case 0x05: // ORA ("OR" Memory with Accumulator) ZP
@@ -476,9 +471,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BPL Relative
         }
 
-        case 0x11: // ORA (IND), Y
+        case 0x11: // ORA ("OR" Memory with Accumulator) (IND), Y
         {
-            break;
+            ORA IND_Y
         }
 
         case 0x15: // ORA ("OR" Memory with Accumulator) ZP, X
@@ -516,9 +511,9 @@ static byte instruction(byte opcode, byte ops[]) {
             JSR ABS
         }
 
-        case 0x21: // AND (IND, X)
+        case 0x21: // AND ("AND" Memory with Accumulator) (IND, X)
         {
-            break;
+            AND IND_X
         }
 
         case 0x24: // BIT (Test Bits in Memory with Accumulator) ZP
@@ -571,9 +566,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BMI Relative
         }
         
-        case 0x31: // AND (IND), Y
+        case 0x31: // AND ("AND" Memory with Accumulator) (IND), Y
         {
-            break;
+            AND IND_Y
         }
 
         case 0x35: // AND ("AND" Memory with Accumulator) ZP, X
@@ -611,9 +606,9 @@ static byte instruction(byte opcode, byte ops[]) {
             RTI Implied
         }
 
-        case 0x41: // EOR (IND, X)
+        case 0x41: // EOR ("Exclusive-OR" Memory with Accumulator) (IND, X)
         {
-            break;
+            EOR IND_X
         }
 
         case 0x45: // EOR ("Exclusive-OR" Memory with Accumulator) ZP
@@ -643,7 +638,8 @@ static byte instruction(byte opcode, byte ops[]) {
 
         case 0x4C: // JMP (Jump to New Location) ABS
         {
-            JMP ABS
+            pc = ABS_ADDR;
+            return 0x00;
         }
 
         case 0x4D: // EOR ("Exclusive-OR" Memory with Accumulator) ABS
@@ -661,9 +657,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BVC Relative
         }
 
-        case 0x51: // EOR (IND), Y
+        case 0x51: // EOR ("Exclusive-OR" Memory with Accumulator) (IND), Y
         {
-            break;
+            EOR IND_Y
         }
 
         case 0x55: // EOR ("Exclusive-OR" Memory with Accumulator) ZP, X
@@ -701,9 +697,9 @@ static byte instruction(byte opcode, byte ops[]) {
             RTS Implied
         }
 
-        case 0x61: // ADC (IND, X)
+        case 0x61: // ADC (Add Memory to Accumulator with Carry) (IND, X)
         {
-            break;
+            ADC IND_X
         }
 
         case 0x65: // ADC (Add Memory to Accumulator with Carry) ZP
@@ -731,9 +727,10 @@ static byte instruction(byte opcode, byte ops[]) {
             ROR Accum
         }
 
-        case 0x6C: // JMP Indirect
+        case 0x6C: // JMP (Jump to New Location) Indirect
         {
-            break;
+            pc = memory[ABS_ADDR] + 0x100 * memory[ops[1] * 0x100 + (byte)(ops[0] + 1)];
+            return 0x00;
         }
 
         case 0x6D: // ADC (Add Memory to Accumulator with Carry) ABS
@@ -751,9 +748,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BVS Relative
         }
 
-        case 0x71: // ADC (IND), Y
+        case 0x71: // ADC (Add Memory to Accumulator with Carry) (IND), Y
         {
-            break;
+            ADC IND_Y
         }
 
         case 0x75: // ADC (Add Memory to Accumulator with Carry) ZP, X
@@ -786,9 +783,9 @@ static byte instruction(byte opcode, byte ops[]) {
             ROR ABS_X
         }
 
-        case 0x81: // STA (IND, X)
+        case 0x81: // STA (Store Accumulator in Memory) (IND, X)
         {
-            break;
+            STA IND_X
         }
 
         case 0x84: // STY (Store Index Y in Memory) ZP
@@ -836,9 +833,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BCC Relative
         }
 
-        case 0x91: // STA (IND), Y
+        case 0x91: // STA (Store Accumulator in Memory) (IND), Y
         {
-            break;
+            STA IND_Y
         }
 
         case 0x94: // STY (Store Index Y in Memory) ZP, X
@@ -881,9 +878,9 @@ static byte instruction(byte opcode, byte ops[]) {
             LDY IMM
         }
 
-        case 0xA1: // LDA (IND, X)
+        case 0xA1: // LDA (Load Accumulator with Memory) (IND, X)
         {
-            break;
+            LDA IND_X
         }
 
         case 0xA2: // LDX (Load Index X with Memory) IMM
@@ -941,9 +938,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BCS Relative
         }
 
-        case 0xB1: // LDA (IND), Y
+        case 0xB1: // LDA (Load Accumulator with Memory) (IND), Y
         {
-            break;
+            LDA IND_Y
         }
 
         case 0xB4: // LDY (Load Index Y with Memory) ZP, X
@@ -996,9 +993,9 @@ static byte instruction(byte opcode, byte ops[]) {
             CPY IMM
         }
 
-        case 0xC1: // CMP (IND, X)
+        case 0xC1: // CMP (Compare Memory and Accumulator) (IND, X)
         {
-            break;
+            CMP IND_X
         }
 
         case 0xC4: // CPY (Compare Memory and Index Y) ZP
@@ -1051,9 +1048,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BNE Relative
         }
 
-        case 0xD1: // CMP (IND), Y
+        case 0xD1: // CMP (Compare Memory and Accumulator) (IND), Y
         {
-            break;
+            CMP IND_Y
         }
 
         case 0xD5: // CMP (Compare Memory and Accumulator) ZP, X
@@ -1091,9 +1088,9 @@ static byte instruction(byte opcode, byte ops[]) {
             CPX IMM
         }
 
-        case 0xE1: // SBC (IND, X)
+        case 0xE1: // SBC (Subtract Memory from Accumulator with Borrow) (IND, X)
         {
-            break;
+            SBC IND_X
         }
 
         case 0xE4: // CPX (Compare Memory and Index X) ZP
@@ -1146,9 +1143,9 @@ static byte instruction(byte opcode, byte ops[]) {
             BEQ Relative
         }
 
-        case 0xF1: // SBC (IND), Y
+        case 0xF1: // SBC (Subtract Memory from Accumulator with Borrow) (IND), Y
         {
-            break;
+            SBC IND_Y
         }
 
         case 0xF5: // SBC (Subtract Memory from Accumulator with Borrow) ZP, X

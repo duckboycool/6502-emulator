@@ -13,14 +13,15 @@ Here is the list of options.
 
   Options:
     -?        Display help and stop execution (this message).
-    -mr {x}   Select the number of rows to print out when displaying memory (default 8).
-    -ml {x}   Select the length of rows to print out when displaying memory (default 16).
-    -ms {x}   Select the starting value of memory to print rows from. Prefix with "0x" for hex input (default 0).
+    -sa {x}   Set the starting address for the ROM. Prefix with "0x" for hex input (default 0x0000).
+    -mr {x}   Set the number of rows to print out when displaying memory (default 8).
+    -ml {x}   Set the length of rows to print out when displaying memory (default 16).
+    -ms {x}   Set the starting value of memory to print rows from. Prefix with "0x" for hex input (default 0).
     --m       Disable the printing of memory once hitting a break (default true).
     --a       Disable ascii representation of printed memory (default true).
     --i       Disable the printing of instructions while executing (default true).
     --p       Enable the printing address (will only print at end if --m or --i) (default false).
-    -pa {x}   Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).
+    -pa {x}   Set value of printing address. Prefix with "0x" for hex input (default 0xFFF9).
     -o {x}    Directly input assembled machine code as string and ignore rest of input.
     -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).
 ```

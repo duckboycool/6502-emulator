@@ -10,7 +10,7 @@
 #define EXESTRING "6502"
 #endif
 
-#define VERSIONSTRING "v0.2.1-dev"
+#define VERSIONSTRING "v0.2.0-beta"
 
 // Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {
@@ -33,9 +33,11 @@ int main(int argc, char** argv) {
     // Handle options and file
     char* file = NULL;
 
-    int start = 0x0000;
+    int memstart = 0x0000;
     int rows = 8;
     int rowsize = 16;
+
+    int romstart = 0x0000;
 
     string codestring;
 
@@ -50,9 +52,10 @@ int main(int argc, char** argv) {
                     "\n"
                     "  Options:\n"
                     "    -?        Display help and stop execution (this message).\n"
-                    "    -mr {x}   Select the number of rows to print out when displaying memory (default 8).\n"
-                    "    -ml {x}   Select the length of rows to print out when displaying memory (default 16).\n"
-                    "    -ms {x}   Select the starting value of memory to print rows from. Prefix with \"0x\" for hex input (default 0).\n"
+                    "    -sa {x}   Set the starting address for the ROM. Prefix with \"0x\" for hex input (default 0x0000).\n"
+                    "    -mr {x}   Set the number of rows to print out when displaying memory (default 8).\n"
+                    "    -ml {x}   Set the length of rows to print out when displaying memory (default 16).\n"
+                    "    -ms {x}   Set the starting value of memory to print rows from. Prefix with \"0x\" for hex input (default 0).\n"
                     "    --m       Disable the printing of memory once hitting a break (default true).\n"
                     "    --a       Disable ascii representation of printed memory (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
@@ -80,6 +83,32 @@ int main(int argc, char** argv) {
 
             else if (argv[i] == string("--p")) {
                 print_out = true;
+            }
+
+            // FIXME: Use a more consistent parsing method
+            else if (argv[i] == string("-sa")) {
+                if (argc == i + 1) {
+                    printf("-sa requires an argument.\n");
+                    return 1;
+                }
+
+                int x = 0;
+
+                stringstream val(argv[i + 1]);
+
+                // Parse hex input
+                if (string(argv[i + 1]).substr(0, 2) == "0x") {
+                    x = stoul(argv[i + 1], nullptr, 16);
+                }
+
+                // Parse int
+                else {
+                    val >> x;
+                }
+                
+                romstart = x;
+
+                i++;
             }
 
             else if (argv[i] == string("-mr")) {
@@ -116,7 +145,6 @@ int main(int argc, char** argv) {
                 i++;
             }
 
-            // FIXME: Use a more consistent parsing method
             else if (argv[i] == string("-ms")) {
                 if (argc == i + 1) {
                     printf("-ms requires an argument.\n");
@@ -137,7 +165,7 @@ int main(int argc, char** argv) {
                     val >> x;
                 }
                 
-                start = x;
+                memstart = x;
 
                 i++;
             }
@@ -206,7 +234,7 @@ int main(int argc, char** argv) {
         }
 
         // Get raw data from file
-        ifstream CodeFile(file);
+        ifstream CodeFile(file, ios::binary);
 
         if (!CodeFile.good()) {
             printf("File \"%s\" not found.\n", file);
@@ -218,6 +246,11 @@ int main(int argc, char** argv) {
 
         codestring = buffer.str();
     }
+
+    if (romstart + codestring.length() > 0x10000) {
+        printf("The input binary goes past the maximum memory address (0xFFFF). Input a smaller binary or set the starting address lower.\n");
+        return 1;
+    }
     
     // Initialize with 0 (not sure why this isn't already)
     for (int i = 0; i < 0x10000; i++) {
@@ -226,7 +259,7 @@ int main(int argc, char** argv) {
 
     // Load code into memory
     for (int i = 0; i < codestring.length(); i++) {
-        memory[i] = codestring[i];
+        memory[romstart + i] = codestring[i];
     }
 
     // Set program counter (reset vector)
@@ -249,14 +282,14 @@ int main(int argc, char** argv) {
 
     if (mem_print) {
         // Output of memory once finished (rows of 8 bytes)
-        for (int i = 0; i < rows && rowsize * (1 + i) + start <= 0x10000; i++) {
-            printf("\n%04X: ", rowsize * i + start);
+        for (int i = 0; i < rows && rowsize * (1 + i) + memstart <= 0x10000; i++) {
+            printf("\n%04X: ", rowsize * i + memstart);
 
             for (int j = 0; j < rowsize; j++) {
-                printf("%02X ", memory[rowsize * i + j + start]);
+                printf("%02X ", memory[rowsize * i + j + memstart]);
             }
 
-            if (asc_print) cout << "| " + ascii(rowsize * i + start, rowsize);
+            if (asc_print) cout << "| " + ascii(rowsize * i + memstart, rowsize);
         }
 
         printf("\n");

@@ -10,7 +10,7 @@
 #define EXESTRING "6502"
 #endif
 
-#define VERSIONSTRING "v0.2.0-beta"
+#define VERSIONSTRING "v0.2.1-dev"
 
 // Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {
@@ -36,7 +36,6 @@ int main(int argc, char** argv) {
     int memstart = 0x0000;
     int rows = 8;
     int rowsize = 16;
-
     int romstart = 0x0000;
 
     string codestring;
@@ -85,7 +84,6 @@ int main(int argc, char** argv) {
                 print_out = true;
             }
 
-            // FIXME: Use a more consistent parsing method
             else if (argv[i] == string("-sa")) {
                 if (argc == i + 1) {
                     printf("-sa requires an argument.\n");
@@ -122,7 +120,6 @@ int main(int argc, char** argv) {
                 stringstream val(argv[i + 1]);
 
                 val >> x;
-
                 rows = x;
 
                 i++;
@@ -139,7 +136,6 @@ int main(int argc, char** argv) {
                 stringstream val(argv[i + 1]);
 
                 val >> x;
-
                 rowsize = x;
 
                 i++;
@@ -215,8 +211,8 @@ int main(int argc, char** argv) {
                 break;
             }
 
+            // Didn't find option
             else {                    
-                // Didn't find option
                 printf("Ignoring unknown option: \"%s\"\n", argv[i]);
             }
         }
@@ -251,11 +247,6 @@ int main(int argc, char** argv) {
         printf("The input binary goes past the maximum memory address (0xFFFF). Input a smaller binary or set the starting address lower.\n");
         return 1;
     }
-    
-    // Initialize with 0 (not sure why this isn't already)
-    for (int i = 0; i < 0x10000; i++) {
-        memory[i] = 0;
-    }
 
     // Load code into memory
     for (int i = 0; i < codestring.length(); i++) {
@@ -272,7 +263,8 @@ int main(int argc, char** argv) {
     while (mvbytes != BRK_MOVE) {
         if (ins_print) printf("%04X %02X - ", pc, memory[pc]); // Print position and instruction before running (which might change program counter)
 
-        mvbytes = instruction(memory[pc], new (byte[2]) {memory[pc + 1], memory[pc + 2]});
+        byte operands[2] = {memory[pc + 1], memory[pc + 2]};
+        mvbytes = instruction(memory[pc], operands);
 
         if (ins_print) printf("A: %02X X: %02X Y: %02X S: %02X SR/NV-BDIZC: [%d%d%d%d%d%d%d%d]\n", a, x, y, sp, sr.n, sr.v, sr._, sr.b, sr.d, sr.i, sr.z, sr.c);
 

@@ -4,13 +4,40 @@
   Contains operations and register/memory values.
 */
 
+bool broken = false;
+
+#ifdef _WIN32
+#define EXESTRING "6502.exe"
+
+#include <windows.h>
+
+BOOL WINAPI CtrlHandler(DWORD fdwCtrlType) {
+    switch (fdwCtrlType) {
+        case CTRL_C_EVENT:
+            broken = true;
+            return TRUE;
+
+        default:
+            return FALSE;
+    }
+}
+#else
+#define EXESTRING "6502"
 #define byte unsigned char
+
+#include <signal.h>
+
+void int_handler(int s) {
+    broken = true;
+}
+#endif
+
 #define byte2 unsigned short
 
 // Absolute address
 #define ABS_ADDR ops[1] * 0x100 + ops[0]
 
-using namespace std; // XXX: Might cause problems
+using std::string;
 
 // Create memory and registers
 byte memory[0x10000] = {};
@@ -58,6 +85,8 @@ byte2 pc;
 bool mem_print = true;
 bool asc_print = true;
 bool ins_print = true;
+// Break when hitting a software break (BRK)
+bool brk_stop = false;
 // Print value if on printing address and enabled
 byte* print_ptr = &memory[0xFFF9];
 bool print_out = false;
@@ -392,7 +421,17 @@ void SED() {
 static byte instruction(byte opcode, byte ops[]) {
     switch (opcode) {
         case 0x00: // BRK (Force Break) Implied
-            return BRK_MOVE;
+            memory[0x100 + sp] = (pc + 2) / 0x100;
+            sp--;
+            memory[0x100 + sp] = (pc + 2) % 0x100;
+            sp--;
+
+            PHP();
+            sr.i = true;
+
+            pc = 0x100 * memory[0xFFFF] + memory[0xFFFE];
+
+            return brk_stop ? 0x00 : BRK_MOVE;
 
         case 0x01: // ORA ("OR" Memory with Accumulator) (IND, X)
             ORA IND_X

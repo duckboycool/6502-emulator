@@ -4,13 +4,7 @@
 
 #include "ops.h"
 
-#ifdef _WIN32
-#define EXESTRING "6502.exe"
-#else
-#define EXESTRING "6502"
-#endif
-
-#define VERSIONSTRING "v0.2.1-dev"
+#define VERSIONSTRING "v0.2.2-dev"
 
 // Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {
@@ -59,6 +53,7 @@ int main(int argc, char** argv) {
                     "    --a       Disable ascii representation of printed memory (default true).\n"
                     "    --i       Disable the printing of instructions while executing (default true).\n"
                     "    --p       Enable the printing address (will only print at end if --m or --i) (default false).\n"
+                    "    --b       Enable continuation on BRK, fetching position from IRQ vector (default false).\n"
                     "    -pa {x}   Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).\n"
                     "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
                     "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n",
@@ -84,6 +79,10 @@ int main(int argc, char** argv) {
                 print_out = true;
             }
 
+            else if (argv[i] == string("--b")) {
+                brk_stop = true;
+            }
+
             else if (argv[i] == string("-sa")) {
                 if (argc == i + 1) {
                     printf("-sa requires an argument.\n");
@@ -92,11 +91,11 @@ int main(int argc, char** argv) {
 
                 int x = 0;
 
-                stringstream val(argv[i + 1]);
+                std::stringstream val(argv[i + 1]);
 
                 // Parse hex input
                 if (string(argv[i + 1]).substr(0, 2) == "0x") {
-                    x = stoul(argv[i + 1], nullptr, 16);
+                    x = std::stoul(argv[i + 1], nullptr, 16);
                 }
 
                 // Parse int
@@ -117,7 +116,7 @@ int main(int argc, char** argv) {
 
                 // Parse int
                 int x = 0;
-                stringstream val(argv[i + 1]);
+                std::stringstream val(argv[i + 1]);
 
                 val >> x;
                 rows = x;
@@ -133,7 +132,7 @@ int main(int argc, char** argv) {
 
                 // Parse int
                 int x = 0;
-                stringstream val(argv[i + 1]);
+                std::stringstream val(argv[i + 1]);
 
                 val >> x;
                 rowsize = x;
@@ -149,11 +148,11 @@ int main(int argc, char** argv) {
 
                 int x = 0;
 
-                stringstream val(argv[i + 1]);
+                std::stringstream val(argv[i + 1]);
 
                 // Parse hex input
                 if (string(argv[i + 1]).substr(0, 2) == "0x") {
-                    x = stoul(argv[i + 1], nullptr, 16);
+                    x = std::stoul(argv[i + 1], nullptr, 16);
                 }
 
                 // Parse int
@@ -174,11 +173,11 @@ int main(int argc, char** argv) {
 
                 int x = 0;
 
-                stringstream val(argv[i + 1]);
+                std::stringstream val(argv[i + 1]);
 
                 // Parse hex input
                 if (string(argv[i + 1]).substr(0, 2) == "0x") {
-                    x = stoul(argv[i + 1], nullptr, 16);
+                    x = std::stoul(argv[i + 1], nullptr, 16);
                 }
 
                 // Parse int
@@ -223,6 +222,23 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Set keyboard interrupt handler
+    #ifdef _WIN32
+    if (!SetConsoleCtrlHandler(CtrlHandler, TRUE)) {
+        printf("WARNING: Unable to set control handler, interrupts will not work.\n\n");
+    }
+    #else
+    // https://stackoverflow.com/a/1641223/
+    struct sigaction sigIntHandler;
+
+    sigIntHandler.sa_handler = int_handler;
+
+    sigemptyset(&sigIntHandler.sa_mask);
+    sigIntHandler.sa_flags = 0;
+
+    sigaction(SIGINT, &sigIntHandler, NULL);
+    #endif
+
     if (codestring.empty()) {
         if (file == NULL) {
             printf("You must input a file or code. Input \"-?\" for help.\n");
@@ -230,14 +246,14 @@ int main(int argc, char** argv) {
         }
 
         // Get raw data from file
-        ifstream CodeFile(file, ios::binary);
+        std::ifstream CodeFile(file, std::ios::binary);
 
         if (!CodeFile.good()) {
             printf("File \"%s\" not found.\n", file);
             return 1;
         }
 
-        stringstream buffer;
+        std::stringstream buffer;
         buffer << CodeFile.rdbuf();
 
         codestring = buffer.str();
@@ -260,7 +276,7 @@ int main(int argc, char** argv) {
     byte mvbytes = 0;
 
     // Instruction loop
-    while (mvbytes != BRK_MOVE) {
+    while (mvbytes != BRK_MOVE && !broken) {
         if (ins_print) printf("%04X %02X - ", pc, memory[pc]); // Print position and instruction before running (which might change program counter)
 
         byte operands[2] = {memory[pc + 1], memory[pc + 2]};
@@ -281,13 +297,13 @@ int main(int argc, char** argv) {
                 printf("%02X ", memory[rowsize * i + j + memstart]);
             }
 
-            if (asc_print) cout << "| " + ascii(rowsize * i + memstart, rowsize);
+            if (asc_print) std::cout << "| " + ascii(rowsize * i + memstart, rowsize);
         }
 
         printf("\n");
     }
 
-    cout << endprint << '\n';
+    std::cout << endprint << '\n';
 
     return 0;
 }

@@ -259,9 +259,11 @@ void RTS() {
 }
 
 void ADC(byte val) {
-    set_nz(a = a + val + sr.c);
+    short sum = (signed char)a + (signed char)val;
+    sr.c = (val + sr.c + a > 0xFF);
+    sr.v = sum < -0x80 || sum >= 0x80;
 
-    sr.c = (val + sr.c > a);
+    set_nz(a = a + val + sr.c);    
 }
 
 void ROR(byte& addr) {
@@ -391,9 +393,11 @@ void CPX(byte val) {
 }
 
 void SBC(byte val) {
-    set_nz(a = a - val - !sr.c);
+    short dif = (signed char)a - (signed char)val;
+    sr.c = (a >= val + !sr.c);
+    sr.v = dif < -0x80 || dif >= 0x80;
 
-    sr.c = (- val - !sr.c < a);
+    set_nz(a = a - val - !sr.c);
 }
 
 void INC(byte& addr) {

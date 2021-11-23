@@ -4,7 +4,7 @@
 
 #include "ops.h"
 
-#define VERSIONSTRING "v0.2.2-dev"
+#define VERSIONSTRING "v0.2.3-dev"
 
 // Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {

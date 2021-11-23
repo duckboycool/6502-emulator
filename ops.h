@@ -105,6 +105,12 @@ void st_print(byte* addr, int val) {
     }
 }
 
+// Set negative and zero flags based off of input value
+void set_nz(byte val) {
+    sr.n = val & 0b10000000;
+    sr.z = !val;
+}
+
 // Define addressing modes
 #define Accum (a);\
     return 0x01;               // Accumulator as an argument
@@ -137,13 +143,13 @@ void st_print(byte* addr, int val) {
 
 // Define instructions
 void ORA(byte val) {
-    a = a | val;
+    set_nz(a = a | val);
 }
 
 void ASL(byte& addr) {
     sr.c = addr / 0x80;
 
-    addr = addr * 0b10;
+    set_nz(addr = addr * 0b10);
 }
 
 void PHP() {
@@ -171,13 +177,13 @@ void JSR(byte val) {
 void ROL(byte& addr) {
     bool bit = addr / 0x80;
 
-    addr = addr * 0b10 + sr.c;
+    set_nz(addr = addr * 0b10 + sr.c);
 
     sr.c = bit;
 }
 
 void AND(byte val) {
-    a = a & val;
+    set_nz(a = a & val);
 }
 
 void BIT(byte val) {
@@ -221,13 +227,13 @@ void RTI() {
 }
 
 void EOR(byte val) {
-    a = a ^ val;
+    set_nz(a = a ^ val);
 }
 
 void LSR(byte& addr) {
     sr.c = addr % 0b10;
 
-    addr = addr / 0b10;
+    set_nz(addr = addr / 0b10);
 }
 
 void PHA() {
@@ -253,7 +259,7 @@ void RTS() {
 }
 
 void ADC(byte val) {
-    a = a + val + sr.c;
+    set_nz(a = a + val + sr.c);
 
     sr.c = (val + sr.c > a);
 }
@@ -261,14 +267,14 @@ void ADC(byte val) {
 void ROR(byte& addr) {
     bool bit = addr % 0b10;
 
-    addr = 0x80 * sr.c + addr / 0b10;
+    set_nz(addr = 0x80 * sr.c + addr / 0b10);
 
     sr.c = bit;
 }
 
 void PLA() {
     sp++;
-    a = memory[0x100 + sp];
+    set_nz(a = memory[0x100 + sp]);
 }
 
 void BVS(signed char val) {
@@ -298,11 +304,11 @@ void STX(byte& addr) {
 }
 
 void DEY() {
-    y--;
+    set_nz(--y);
 }
 
 void TXA() {
-    a = x;
+    set_nz(a = x);
 }
 
 void BCC(signed char val) {
@@ -310,7 +316,7 @@ void BCC(signed char val) {
 }
 
 void TYA() {
-    a = y;
+    set_nz(a = y);
 }
 
 void TXS() {
@@ -318,23 +324,23 @@ void TXS() {
 }
 
 void LDY(byte val) {
-    y = val;
+    set_nz(y = val);
 }
 
 void LDA(byte val) {
-    a = val;
+    set_nz(a = val);
 }
 
 void LDX(byte val) {
-    x = val;
+    set_nz(x = val);
 }
 
 void TAY() {
-    y = a;
+    set_nz(y = a);
 }
 
 void TAX() {
-    x = a;
+    set_nz(x = a);
 }
 
 void BCS(signed char val) {
@@ -346,31 +352,29 @@ void CLV() {
 }
 
 void TSX() {
-    x = sp;
+    set_nz(x = sp);
 }
 
 void CPY(byte val) {
-    sr.n = (y - val) & 0b10000000;
-    sr.z = !(y - val);
+    set_nz(y - val);
     sr.c = y >= val;
 }
 
 void CMP(byte val) {
-    sr.n = (a - val) & 0b10000000;
-    sr.z = !(a - val);
+    set_nz(a - val);
     sr.c = a >= val;
 }
 
 void DEC(byte& addr) {
-    addr--;
+    set_nz(--addr);
 }
 
 void INY() {
-    y++;
+    set_nz(++y);
 }
 
 void DEX() {
-    x--;
+    set_nz(--x);
 }
 
 void BNE(signed char val) {
@@ -382,23 +386,22 @@ void CLD() {
 }
 
 void CPX(byte val) {
-    sr.n = (x - val) & 0b10000000;
-    sr.z = !(x - val);
+    set_nz(x - val);
     sr.c = x >= val;
 }
 
 void SBC(byte val) {
-    a = a - val - !sr.c;
+    set_nz(a = a - val - !sr.c);
 
     sr.c = (- val - !sr.c < a);
 }
 
 void INC(byte& addr) {
-    addr++;
+    set_nz(++addr);
 }
 
 void INX() {
-    x++;
+    set_nz(++x);
 }
 
 void NOP() {
@@ -415,8 +418,9 @@ void SED() {
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Check for if ops set other flags
-    Properly set values on routines/BRK
+    Implement overflow flag on ADC and SBC
+    Properly set values on routines
+    Implement decimal mode
 */
 static byte instruction(byte opcode, byte ops[]) {
     switch (opcode) {

@@ -1,10 +1,14 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <chrono>
+#include <thread>
+
+using namespace std::chrono;
 
 #include "ops.h"
 
-#define VERSIONSTRING "v0.3.0-beta"
+#define VERSIONSTRING "v0.3.1-dev"
 
 // Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {
@@ -32,6 +36,8 @@ int main(int argc, char** argv) {
     int rowsize = 16;
     int romstart = 0x0000;
 
+    int frequency = 0;
+
     string codestring;
 
     for (int i = 1; i < argc; i++) {
@@ -55,6 +61,7 @@ int main(int argc, char** argv) {
                     "    --p       Enable the printing address (will only print at end if --m or --i) (default false).\n"
                     "    --b       Enable continuation on BRK, fetching position from IRQ vector (default false).\n"
                     "    -pa {x}   Set value of printing address. Prefix with \"0x\" for hex input (default 0xFFF9).\n"
+                    "    -mf {x}   Set maximum operation frequency for emulator. Suffix with \"k\" or \"m\" for thousands or millions (default none).\n"
                     "    -o {x}    Directly input assembled machine code as string and ignore rest of input.\n"
                     "    -f {x}    Explicitly select the input file to be executed and ignore rest of input (default last arg).\n",
                     VERSIONSTRING,
@@ -190,6 +197,40 @@ int main(int argc, char** argv) {
                 i++;
             }
 
+            else if (argv[i] == string("-mf")) {
+                if (argc == i + 1) {
+                    printf("-mf requires an argument.\n");
+                    return 1;
+                }
+
+                int x = 0;
+
+                string arg(argv[i + 1]);
+
+                char last = arg.back();
+
+                // Parse int value
+                if (last == 'k' || last == 'K') {
+                    std::stringstream val(arg.substr(0, arg.length() - 1));
+
+                    val >> x;
+                    x *= 1000;
+                } else if (last == 'm' || last == 'M') {
+                    std::stringstream val(arg.substr(0, arg.length() - 1));
+
+                    val >> x;
+                    x *= 1000000;
+                } else {
+                    std::stringstream val(argv[i + 1]);
+
+                    val >> x;
+                }
+
+                frequency = x;
+
+                i++;
+            }
+
             else if (argv[i] == string("-o")) {
                 if (argc == i + 1) {
                     printf("-o requires an argument.\n");
@@ -275,6 +316,9 @@ int main(int argc, char** argv) {
     // Amount of bytes to move (0xFF means break)
     byte mvbytes = 0;
 
+    steady_clock::time_point begin = steady_clock::now();
+    long i = 0;
+
     // Instruction loop
     while (mvbytes != BRK_MOVE && !broken) {
         if (ins_print) printf("%04X %02X - ", pc, memory[pc]); // Print position and instruction before running (which might change program counter)
@@ -286,6 +330,15 @@ int main(int argc, char** argv) {
 
         // Increment program counter
         pc += mvbytes;
+        
+        // Delay to match input frequency if given (might want to clean up)
+        if (frequency) {
+            i++;
+
+            if (frequency < 100 || i < 100 || !(i % (frequency / 100))) {
+                std::this_thread::sleep_for(nanoseconds((1000000000ll * i)/frequency - duration_cast<nanoseconds>(steady_clock::now() - begin).count()));
+            }
+        }
     }
 
     if (mem_print) {

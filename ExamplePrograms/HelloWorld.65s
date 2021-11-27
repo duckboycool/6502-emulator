@@ -1,13 +1,12 @@
   ; Example hello world program using a basic conditional loop
-  .ORG $0000
 loop:
-  LDY $20,X
+  LDY data,X
   STY $FFF9
   INX
-  CMP $20,X
+  CMP data,X
   BNE loop
 
   BRK
 
-  .ORG $0020
+data:
   .BYTE "Hello world!"

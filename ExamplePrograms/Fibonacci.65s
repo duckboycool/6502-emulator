@@ -1,0 +1,60 @@
+  ; Example Fibonacci program
+  ; Prints out Fibonacci numbers in order (currently max 2 digits)
+  .ORG $0000
+  
+  .ORG $0040
+  .BYTE "0123456789"
+
+  .ORG $1000
+print_addr = $FFF9
+start:
+  ; Start values at 1 and 0
+  CLD
+  LDA #01
+  LDX #00
+
+loop:
+  JSR print
+  ; Add X to A
+  STX $00
+  TAX
+  ADC $00
+  LDY #$0A ; Newline
+  STY print_addr
+  JMP loop
+
+print:
+  ; Print out value of A as decimal
+  LDY #$FF
+  STY $01
+  SEC
+  PHA
+subtract_loop:
+  INC $01
+  SBC #10
+  BPL subtract_loop
+  
+  ADC #10
+  PHA
+  LDY $01
+  BEQ second_dig ; Skip first digit if 0
+first_dig:
+  LDA $40,Y
+  STA print_addr
+second_dig:
+  PLA
+  TAY
+  LDA $40,Y
+  STA print_addr
+  PLA
+  CMP #100
+  BCS end
+  CLC
+  RTS
+  
+end:
+  BRK
+
+  .ORG $FFFC
+  .WORD $1000
+  .WORD $0000

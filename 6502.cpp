@@ -8,7 +8,7 @@ using namespace std::chrono;
 
 #include "ops.h"
 
-#define VERSIONSTRING "v0.3.1-dev"
+#define VERSIONSTRING "v0.3.3-dev"
 
 // Function to get ascii representation of memory for printout
 string ascii(byte2 memaddr, int size) {

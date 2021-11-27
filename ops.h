@@ -157,7 +157,7 @@ void PHP() {
     sp--;
 }
 
-void BPL(byte val) {
+void BPL(signed char val) {
     if (!sr.n) pc += val;
 }
 
@@ -207,7 +207,7 @@ void PLP() {
     sr.c = val & 0b00000001;
 }
 
-void BMI(byte val) {
+void BMI(signed char val) {
     if (sr.n) pc += val;
 }
 
@@ -425,7 +425,6 @@ void SED() {
 
 // Function that executes instructions and returns the amount to change pc by
 /* TODO:
-    Implement overflow flag on ADC and SBC
     Properly set values on routines
     Implement decimal mode
 */
